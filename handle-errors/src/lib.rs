@@ -52,3 +52,6 @@ pub async fn return_error(r: Rejection) -> Result<impl Reply, Rejection> {
         ))
     }
 }
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
