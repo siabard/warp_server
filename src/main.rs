@@ -1,8 +1,7 @@
 #![warn(clippy::all)]
 
 use handle_errors::return_error;
-use warp::http::Method;
-use warp::Filter;
+use warp::{http::Method, Filter};
 
 mod routes;
 mod store;
@@ -10,6 +9,12 @@ mod types;
 
 #[tokio::main]
 async fn main() {
+    log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
+
+    log::error!("This is an error");
+    log::info!("This is info!");
+    log::warn!("This is a warning!");
+
     let store = store::Store::new();
     let store_filter = warp::any().map(move || store.clone());
 

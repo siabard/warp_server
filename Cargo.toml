@@ -1,5 +1,5 @@
 [package]
-name = "warp_server"
+name = "practical-rust-book"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,3 +12,6 @@ serde = { version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 # 로컬 가져오기에서는 버전 숫자는 빼도 된다.
 handle-errors = {path = "handle-errors"}
+log = "0.4"
+log4rs = "1.0"
+env_logger = "0.9"
