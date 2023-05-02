@@ -8,5 +8,5 @@ pub struct Question {
     pub tags: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash, Deserialize)]
-pub struct QuestionId(pub String);
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct QuestionId(pub i32); // 굵게 표시
