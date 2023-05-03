@@ -10,31 +10,13 @@ mod types;
 
 #[tokio::main]
 async fn main() {
-    // 아래 주석은 취소선으로 하든가 해야함
-    /*
-    log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
-
-    log::error!("This is an error");
-    log::info!("This is info!");
-    log::warn!("This is a warning!");
-
-    let log = warp::log::custom(|info| {
-        log::info!(
-            "{} {} {} {:?} from {} with {:?}",
-            info.method(),
-            info.path(),
-            info.status(),
-            info.elapsed(),
-            info.remote_addr().unwrap(),
-            info.request_headers()
-        );
-    });
-     */
-
     let log_filter = std::env::var("RUST_LOG")
         .unwrap_or_else(|_| "practical_rust_book=info,warp=error".to_owned());
 
-    let store = store::Store::new();
+    // 사용자 이름과 암호를 넣어야한다면
+    // 연결 문자열은 아래와 같다
+    // "postgres://username:password@localhost:5432/rustwebdev"
+    let store = store::Store::new("postgres://localhost:5432/rustwebdev").await;
     let store_filter = warp::any().map(move || store.clone());
 
     // 취소선 넣어야하는 구문
