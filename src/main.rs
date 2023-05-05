@@ -11,12 +11,18 @@ mod types;
 #[tokio::main]
 async fn main() {
     let log_filter = std::env::var("RUST_LOG")
-        .unwrap_or_else(|_| "practical_rust_book=info,warp=error".to_owned());
+        .unwrap_or_else(|_| "handle_errors=warn,practical_rust_book=info,warp=error".to_owned());
 
     // 사용자 이름과 암호를 넣어야한다면
     // 연결 문자열은 아래와 같다
     // "postgres://username:password@localhost:5432/rustwebdev"
     let store = store::Store::new("postgres://localhost:5432/rustwebdev").await;
+
+    sqlx::migrate!()
+        .run(&store.clone().connection)
+        .await
+        .expect("Cannot run migration");
+
     let store_filter = warp::any().map(move || store.clone());
 
     // 취소선 넣어야하는 구문
