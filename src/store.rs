@@ -56,7 +56,7 @@ impl Store {
     pub async fn add_question(&self, new_question: NewQuestion) -> Result<Question, Error> {
         match sqlx::query(
             "INSERT INTO questions (title, content, tags)
-             VALUES ($1, $2, R3)
+             VALUES ($1, $2, $3)
              RETURNING id, title, content, tags",
         )
         .bind(new_question.title)
