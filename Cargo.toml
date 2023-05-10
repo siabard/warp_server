@@ -3,14 +3,11 @@ name = "practical-rust-book"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 tokio = { version = "1.2", features = ["full"] }
 warp = "0.3"
 serde = { version = "1.0", features = ["derive"]}
 serde_json = "1.0"
-# 로컬 가져오기에서는 버전 숫자는 빼도 된다.
 handle-errors = {path = "handle-errors"}
 log = "0.4"
 log4rs = "1.0"
@@ -18,6 +15,7 @@ env_logger = "0.9"
 uuid = { version = "0.8", features = ["v4"]}
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-# 출력 목적으로 줄나눔한 것이다. 한줄로 써야 컴파일된다.
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "migrate", "postgres", "sqlite" ] }
 reqwest = { version = "0.11", features = ["json"]}
+reqwest-middleware = "0.1.1"
+reqwest-retry = "0.1.1"

@@ -10,7 +10,7 @@ mod store;
 mod types;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), sqlx::Error> {
     let log_filter = std::env::var("RUST_LOG")
         .unwrap_or_else(|_| "handle_errors=warn,practical_rust_book=info,warp=error".to_owned());
 
@@ -86,15 +86,25 @@ async fn main() {
         .and(warp::body::form())
         .and_then(routes::answer::add_answer);
 
+    let registration = warp::post()
+        .and(warp::path("registration"))
+        .and(warp::path::end())
+        .and(store_filter.clone())
+        .and(warp::body::json())
+        .and_then(routes::authentication::register);
+
     let routes = get_questions
         .or(add_question)
         .or(update_question)
         .or(delete_question)
         .or(add_answer)
+        .or(registration)
         .with(cors)
         //.with(log)
         .with(warp::trace::request())
         .recover(return_error);
 
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+
+    Ok(())
 }

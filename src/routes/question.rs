@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use tracing::{event, instrument, Level};
 use warp::http::StatusCode;
 
-use crate::profanity::check_profanily;
+use crate::profanity::check_profanity;
 use crate::store::Store;
 use crate::types::pagination::extract_pagination;
 use crate::types::pagination::Pagination;
@@ -37,20 +37,23 @@ pub async fn update_question(
     store: Store,
     question: Question,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let title = match check_profanily(question.title).await {
-        Ok(res) => res,
-        Err(e) => return Err(warp::reject::custom(e)),
-    };
+    let title = check_profanity(question.title);
+    let content = check_profanity(question.content);
 
-    let content = match check_profanily(question.content).await {
-        Ok(res) => res,
-        Err(e) => return Err(warp::reject::custom(e)),
-    };
+    let (title, content) = tokio::join!(title, content);
+
+    if title.is_err() {
+        return Err(warp::reject::custom(title.unwrap_err()));
+    }
+
+    if content.is_err() {
+        return Err(warp::reject::custom(content.unwrap_err()));
+    }
 
     let question = Question {
         id: question.id,
-        title,
-        content,
+        title: title.unwrap(),
+        content: content.unwrap(),
         tags: question.tags,
     };
 
@@ -75,12 +78,12 @@ pub async fn add_question(
     store: Store,
     new_question: NewQuestion,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let title = match check_profanily(new_question.title).await {
+    let title = match check_profanity(new_question.title).await {
         Ok(res) => res,
         Err(e) => return Err(warp::reject::custom(e)),
     };
 
-    let content = match check_profanily(new_question.content).await {
+    let content = match check_profanity(new_question.content).await {
         Ok(res) => res,
         Err(e) => return Err(warp::reject::custom(e)),
     };
