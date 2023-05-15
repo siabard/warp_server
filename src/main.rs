@@ -1,5 +1,7 @@
 #![warn(clippy::all)]
 
+use clap::Parser;
+use config::Config;
 use handle_errors::return_error;
 use tracing_subscriber::fmt::format::FmtSpan;
 use warp::{http::Method, Filter};
@@ -9,15 +11,40 @@ mod routes;
 mod store;
 mod types;
 
+#[derive(Parser, Debug, Default, serde::Deserialize, PartialEq)]
+struct Args {
+    log_level: String,
+    /// Postgres 데이터베이스 URL
+    database_host: String,
+    /// 데이터베이스 연결 포트 번호
+    database_port: u16,
+    /// 데이터베이스 명
+    database_name: String,
+    /// 웹서버 포트번호
+    port: u16,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
-    let log_filter = std::env::var("RUST_LOG")
-        .unwrap_or_else(|_| "handle_errors=warn,practical_rust_book=info,warp=error".to_owned());
+    let config = Config::builder()
+        .add_source(config::File::with_name("setup"))
+        .build()
+        .unwrap();
 
-    // 사용자 이름과 암호를 넣어야한다면
-    // 연결 문자열은 아래와 같다
-    // "postgres://username:password@localhost:5432/rustwebdev"
-    let store = store::Store::new("postgres://localhost:5432/rustwebdev").await;
+    let config = config.try_deserialize::<Args>().unwrap();
+
+    let log_filter = std::env::var("RUST_LOG").unwrap_or_else(|_| {
+        format!(
+            "handle_errors={},rust_web_dev={},warp={}",
+            config.log_level, config.log_level, config.log_level
+        )
+    });
+
+    let store = store::Store::new(&format!(
+        "postgres://{}:{}/{}",
+        config.database_host, config.database_port, config.database_name
+    ))
+    .await;
 
     sqlx::migrate!()
         .run(&store.clone().connection)
@@ -116,7 +143,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .with(warp::trace::request())
         .recover(return_error);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(routes).run(([127, 0, 0, 1], config.port)).await;
 
     Ok(())
 }
