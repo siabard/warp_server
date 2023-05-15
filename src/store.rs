@@ -14,19 +14,15 @@ pub struct Store {
 }
 
 impl Store {
-    pub async fn new(db_url: &str) -> Self {
-        let db_pool = match PgPoolOptions::new()
+    pub async fn new(db_url: &str) -> Result<Self, sqlx::Error> {
+        let db_pool = PgPoolOptions::new()
             .max_connections(5)
             .connect(db_url)
-            .await
-        {
-            Ok(pool) => pool,
-            Err(e) => panic!("DB 연결을 하지 못했습니다: {}", e),
-        };
+            .await?;
 
-        Store {
+        Ok(Store {
             connection: db_pool,
-        }
+        })
     }
 
     pub async fn get_questions(

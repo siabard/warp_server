@@ -2,7 +2,9 @@
 
 use clap::Parser;
 use config::Config;
+use dotenv;
 use handle_errors::return_error;
+use std::env;
 use tracing_subscriber::fmt::format::FmtSpan;
 use warp::{http::Method, Filter};
 
@@ -27,15 +29,10 @@ struct Args {
     /// 데이터베이스 명
     #[clap(long, default_value = "rustwebdev")]
     database_name: String,
-    /// 웹서버 포트번호
-    #[clap(long, default_value = "8080")]
-    port: u16,
 }
 
 #[tokio::main]
-async fn main() -> Result<(), sqlx::Error> {
-    let args = Args::parse();
-
+async fn main() -> Result<(), handle_errors::Error> {
     /*
     let config = Config::builder()
         .add_source(config::File::with_name("setup"))
@@ -44,6 +41,23 @@ async fn main() -> Result<(), sqlx::Error> {
 
     let config = config.try_deserialize::<Args>().unwrap();
      */
+
+    dotenv::dotenv().ok();
+    if let Err(_) = env::var("BAD_WORDS_API_KEY") {
+        panic!("BadWords API key not set");
+    }
+
+    if let Err(_) = env::var("PASETO_KEY") {
+        panic!("PASETO key not set");
+    }
+
+    let port = std::env::var("PORT")
+        .ok()
+        .map(|val| val.parse::<u16>())
+        .unwrap_or(Ok(8080))
+        .map_err(|e| handle_errors::Error::ParseError(e))?;
+
+    let args = Args::parse();
 
     let log_filter = std::env::var("RUST_LOG").unwrap_or_else(|_| {
         format!(
@@ -56,9 +70,13 @@ async fn main() -> Result<(), sqlx::Error> {
         "postgres://{}:{}/{}",
         args.database_host, args.database_port, args.database_name
     ))
-    .await;
+    .await
+    .map_err(|e| handle_errors::Error::DatabaseQueryError(e))?;
 
-    sqlx::migrate!().run(&store.clone().connection).await?;
+    sqlx::migrate!()
+        .run(&store.clone().connection)
+        .await
+        .map_err(|e| handle_errors::Error::MigrationError(e))?;
 
     let store_filter = warp::any().map(move || store.clone());
 
@@ -152,7 +170,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .with(warp::trace::request())
         .recover(return_error);
 
-    warp::serve(routes).run(([127, 0, 0, 1], args.port)).await;
+    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
 
     Ok(())
 }
