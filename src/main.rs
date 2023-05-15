@@ -11,45 +11,54 @@ mod routes;
 mod store;
 mod types;
 
-#[derive(Parser, Debug, Default, serde::Deserialize, PartialEq)]
+/// Q&A 웹서비스 API
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
 struct Args {
+    /// 로깅할 에러 수준(info, warn, error)
+    #[clap(short, long, default_value = "warn")]
     log_level: String,
     /// Postgres 데이터베이스 URL
+    #[clap(long, default_value = "localhost")]
     database_host: String,
     /// 데이터베이스 연결 포트 번호
+    #[clap(long, default_value = "5432")]
     database_port: u16,
     /// 데이터베이스 명
+    #[clap(long, default_value = "rustwebdev")]
     database_name: String,
     /// 웹서버 포트번호
+    #[clap(long, default_value = "8080")]
     port: u16,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
+    let args = Args::parse();
+
+    /*
     let config = Config::builder()
         .add_source(config::File::with_name("setup"))
         .build()
         .unwrap();
 
     let config = config.try_deserialize::<Args>().unwrap();
+     */
 
     let log_filter = std::env::var("RUST_LOG").unwrap_or_else(|_| {
         format!(
             "handle_errors={},rust_web_dev={},warp={}",
-            config.log_level, config.log_level, config.log_level
+            args.log_level, args.log_level, args.log_level
         )
     });
 
     let store = store::Store::new(&format!(
         "postgres://{}:{}/{}",
-        config.database_host, config.database_port, config.database_name
+        args.database_host, args.database_port, args.database_name
     ))
     .await;
 
-    sqlx::migrate!()
-        .run(&store.clone().connection)
-        .await
-        .expect("Cannot run migration");
+    sqlx::migrate!().run(&store.clone().connection).await?;
 
     let store_filter = warp::any().map(move || store.clone());
 
@@ -143,7 +152,7 @@ async fn main() -> Result<(), sqlx::Error> {
         .with(warp::trace::request())
         .recover(return_error);
 
-    warp::serve(routes).run(([127, 0, 0, 1], config.port)).await;
+    warp::serve(routes).run(([127, 0, 0, 1], args.port)).await;
 
     Ok(())
 }
