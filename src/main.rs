@@ -1,35 +1,15 @@
 #![warn(clippy::all)]
 
-use clap::Parser;
-use config::Config;
-use dotenv;
 use handle_errors::return_error;
 use std::env;
 use tracing_subscriber::fmt::format::FmtSpan;
 use warp::{http::Method, Filter};
 
+mod config;
 mod profanity;
 mod routes;
 mod store;
 mod types;
-
-/// Q&A 웹서비스 API
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    /// 로깅할 에러 수준(info, warn, error)
-    #[clap(short, long, default_value = "warn")]
-    log_level: String,
-    /// Postgres 데이터베이스 URL
-    #[clap(long, default_value = "localhost")]
-    database_host: String,
-    /// 데이터베이스 연결 포트 번호
-    #[clap(long, default_value = "5432")]
-    database_port: u16,
-    /// 데이터베이스 명
-    #[clap(long, default_value = "rustwebdev")]
-    database_name: String,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), handle_errors::Error> {
@@ -42,33 +22,18 @@ async fn main() -> Result<(), handle_errors::Error> {
     let config = config.try_deserialize::<Args>().unwrap();
      */
 
-    dotenv::dotenv().ok();
-    if let Err(_) = env::var("BAD_WORDS_API_KEY") {
-        panic!("BadWords API key not set");
-    }
-
-    if let Err(_) = env::var("PASETO_KEY") {
-        panic!("PASETO key not set");
-    }
-
-    let port = std::env::var("PORT")
-        .ok()
-        .map(|val| val.parse::<u16>())
-        .unwrap_or(Ok(8080))
-        .map_err(|e| handle_errors::Error::ParseError(e))?;
-
-    let args = Args::parse();
+    let config = config::Config::new().expect("Config can't be set");
 
     let log_filter = std::env::var("RUST_LOG").unwrap_or_else(|_| {
         format!(
             "handle_errors={},rust_web_dev={},warp={}",
-            args.log_level, args.log_level, args.log_level
+            config.log_level, config.log_level, config.log_level
         )
     });
 
     let store = store::Store::new(&format!(
-        "postgres://{}:{}/{}",
-        args.database_host, args.database_port, args.database_name
+        "postgres://{}:{}@{}:{}/{}",
+        config.db_user, config.db_password, config.db_host, config.db_port, config.db_name
     ))
     .await
     .map_err(|e| handle_errors::Error::DatabaseQueryError(e))?;
@@ -170,7 +135,9 @@ async fn main() -> Result<(), handle_errors::Error> {
         .with(warp::trace::request())
         .recover(return_error);
 
-    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
+    tracing::info!("Q&A service build ID {}", env!("RUST_WEB_DEV_VERSION"));
+
+    warp::serve(routes).run(([127, 0, 0, 1], config.port)).await;
 
     Ok(())
 }
