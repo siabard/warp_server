@@ -4,7 +4,7 @@ use handle_errors::Error;
 
 /// Pagination 구조체는 쿼리 매개변수로부터
 /// 추출된다.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
 pub struct Pagination {
     /// 반환될 마지막 아이템의 인덱스
     pub limit: Option<u32>,
@@ -28,7 +28,7 @@ pub struct Pagination {
 /// ```
 pub fn extract_pagination(params: HashMap<String, String>) -> Result<Pagination, Error> {
     // 나중에 더 개선가능하다.
-    if params.contains_key("start") && params.contains_key("end") {
+    if params.contains_key("limit") && params.contains_key("offset") {
         return Ok(Pagination {
             // "limit" 매개변수를 쿼리에서 가져와
             // 숫자로 변환을 시도한다.
@@ -50,4 +50,33 @@ pub fn extract_pagination(params: HashMap<String, String>) -> Result<Pagination,
     }
 
     Err(Error::MissingParameters)
+}
+
+#[cfg(test)]
+mod pagination_tests {
+    use super::{extract_pagination, Error, HashMap, Pagination};
+
+    #[test]
+    fn valid_pagination() {
+        let mut params = HashMap::new();
+        params.insert(String::from("limit"), String::from("1"));
+        params.insert(String::from("offset"), String::from("1"));
+        let pagination_result = extract_pagination(params);
+        let expected = Pagination {
+            limit: Some(1),
+            offset: 1,
+        };
+        assert_eq!(pagination_result.unwrap(), expected);
+    }
+
+    #[test]
+    fn missing_offset_parameter() {
+        let mut params = HashMap::new();
+        params.insert(String::from("limit"), String::from("1"));
+
+        let pagination_result = format!("{}", extract_pagination(params).unwrap_err());
+        let expected = format!("{}", Error::MissingParameters);
+
+        assert_eq!(pagination_result, expected);
+    }
 }
