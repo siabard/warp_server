@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Session {
     pub exp: DateTime<Utc>,
     pub account_id: AccountId,
-    pub nbf: DateTime<Utc>,
+    //pub nbf: DateTime<Utc>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

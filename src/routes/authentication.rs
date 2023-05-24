@@ -87,9 +87,32 @@ pub fn auth() -> impl Filter<Extract = (Session,), Error = warp::Rejection> + Cl
     warp::header::<String>("Authorization").and_then(|token: String| {
         let token = match verify_token(token) {
             Ok(t) => t,
-            Err(_) => return future::ready(Err(warp::reject::reject())),
+            Err(_) => {
+                return future::ready(Err(warp::reject::custom(
+                    handle_errors::Error::Unauthorized,
+                )))
+            }
         };
 
         future::ready(Ok(token))
     })
+}
+
+#[cfg(test)]
+mod authentication_tests {
+    use super::{auth, env, issue_token, AccountId};
+
+    #[tokio::test]
+    async fn post_questions_auth() {
+        env::set_var("PASETO_KEY", "RANDOM WORDS WINTER MACINTOSH PC");
+        let token = issue_token(AccountId(3));
+
+        let filter = auth();
+
+        let res = warp::test::request()
+            .header("Authorization", token)
+            .filter(&filter);
+
+        assert_eq!(res.await.unwrap().account_id, AccountId(3));
+    }
 }
