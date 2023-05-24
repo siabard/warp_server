@@ -1,5 +1,4 @@
 use clap::Parser;
-use dotenv;
 use std::env;
 
 /// Q&A 웹서비스 API
